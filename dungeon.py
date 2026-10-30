@@ -37,14 +37,70 @@ class Dungeon:
     def display(self):
         for row in self.rows:
             print(row)
+    def health_status(self):
+        health = 100
+        if self.player_pos == self.exit_pos:
+            health -= 10
+        if self.player_pos == self.key_pos:
+            health -= 5
+        if self.player_pos == self.door_pos and self.key_pos is None:
+            health -= 5
+        if self.player_pos == self.treasure_pos:
+            health -= 20
+        print(f" health: {health}")    
+    def key_status(self):
+        score = 0
+        if self.player_pos == self.exit_pos:
+            score += 10
+        if self.player_pos == self.key_pos:
+            score += 5
+        if self.player_pos == self.door_pos and self.key_pos is None:
+            score += 5
+        if self.player_pos == self.treasure_pos:
+            score += 20
+        print(f" keyscore: {score}")
+        
+    def score_status(self):
+        score = 0
+        if self.player_pos == self.exit_pos:
+            score += 10
+        if self.player_pos == self.key_pos:
+            score += 5
+        if self.player_pos == self.door_pos and self.key_pos is None:
+            score += 5
+        if self.player_pos == self.treasure_pos:
+            score += 20
+        print(f" score: {score}")
+    def status(self):
+        if self.player_pos == self.exit_pos:
+            print("WON")
+        elif self.player_pos == self.key_pos:
+            print("KEY")
+        elif self.player_pos == self.door_pos and self.key_pos is None:
+            print("DOOR")
+        elif self.player_pos == self.treasure_pos:
+            print("TREASURE")
+        else:
+            print("IN PROGRESS")
+    def move_score(self):
+        score = 0
+        if self.player_pos == self.exit_pos:
+            score += 10
+        if self.player_pos == self.key_pos:
+            score += 5
+        if self.player_pos == self.door_pos and self.key_pos is None:
+            score += 5
+        if self.player_pos == self.treasure_pos:
+            score += 20
+        print(f" movescore: {score}")
     def move_player(self, direction):
-        if direction == 'up':
+        if direction == 'W':
             new_pos = (self.player_pos[0] - 1, self.player_pos[1])
-        elif direction == 'down':
+        elif direction == 'S':
             new_pos = (self.player_pos[0] + 1, self.player_pos[1])
-        elif direction == 'left':
+        elif direction == 'A':
             new_pos = (self.player_pos[0], self.player_pos[1] - 1)
-        elif direction == 'right':
+        elif direction == 'D':
             new_pos = (self.player_pos[0], self.player_pos[1] + 1)
         else:
             print("Invalid direction! Use 'up', 'down', 'left', or 'right'.")
@@ -72,10 +128,10 @@ class Dungeon:
             print("Congratulations! You've reached the exit!")
             return True
         if self.player_pos == self.key_pos:
-            print("You've found the key!")
+            print("key!")
             self.key_pos = None
         if self.player_pos == self.door_pos and self.key_pos is None:
-            print("You've unlocked the door!")
+            print("door!")
             self.door_pos = None
         if self.player_pos == self.treasure_pos:
             print("You've found the treasure!")
@@ -86,6 +142,10 @@ class Dungeon:
             self.display()
             direction = input("Enter direction (up: w, down: s, left: a, right: d): ")
             self.move_player(direction)
+            self.health_status()
+            self.key_status()
+            self.score_status()
+            self.move_score()
             if self.check_game_status():
                 break
     def get_player_position(self):
