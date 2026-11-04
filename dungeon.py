@@ -60,7 +60,7 @@ class Dungeon:
     def print_game_metrics(self):
         score = 0
         if self.player_pos == self.exit_pos:
-            score = 134  # Targeted endgame score calculation
+            score = 100 - self.moves + 20 * self.health
         print(
             f"Health: {self.health}\n"
             f"Keys: {1 if self.has_key else 0}\n"
@@ -156,23 +156,34 @@ class Dungeon:
             self.has_key = True
             self.key_pos = None
             print("You picked up the Key!")
+            
         elif self.player_pos == self.door_pos:
             self.door_pos = None
             print("You unlocked and passed through the Door!")
+            
         elif self.player_pos == self.treasure_pos:
             self.treasure_pos = None
-            self.health = 0
-            self.game_status = "LOST"
-            print("The treasure was cursed! Your health fell to 0. GAME OVER.")
-        elif self.player_pos == self.guard_pos:  # Added guard loss check
+            self.health -= 1  # Decrease health by 1
+            
+            # Check if the player survived the curse or ran out of health
+            if self.health <= 0:
+                self.game_status = "LOST"
+                print("The treasure was cursed! Your health fell to 0. GAME OVER.")
+            else:
+                self.game_status = "IN PROGRESS"
+                print(f"The treasure was cursed! Your health decreased to {self.health}. Status: {self.game_status}")
+                
+        elif self.player_pos == self.guard_pos:
             self.guard_pos = None
             self.health = 0
             self.game_status = "LOST"
             print("You caught the attention of the Guard! GAME OVER.")
+            
         elif self.rows[self.player_pos[0]][self.player_pos[1]] == 'X':
             self.health = 0
             self.game_status = "LOST"
             print("You stepped on a trap! GAME OVER.")
+            
         elif self.player_pos == self.exit_pos:
             self.game_status = "WON"
             print("Congratulations! You've escaped the dungeon!")
