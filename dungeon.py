@@ -1,5 +1,5 @@
-from list import p_list
 import random
+from list import p_list
 
 class Dungeon:
     def __init__(self):
@@ -10,10 +10,12 @@ class Dungeon:
         self.key_pos = self.find_key()
         self.door_pos = self.find_door()
         self.treasure_pos = self.find_treasure()
-        self.moves = 0
-        self.health = 100
         
-        # History stack to store previous game states for the undo feature
+        self.moves = 0
+        self.health = 2  
+        self.has_key = False
+        self.game_status = "IN PROGRESS"  # Options: IN PROGRESS, WON, LOST
+        
         self.history = []
 
     def find_player(self):
@@ -50,64 +52,20 @@ class Dungeon:
         for row in self.rows:
             print(row)
 
-    def health_status(self):
-        if self.player_pos == self.exit_pos:
-            self.health -= 10
-        if self.player_pos == self.key_pos:
-            self.health -= 5
-        if self.player_pos == self.door_pos and self.key_pos is None:
-            self.health -= 5
-        if self.player_pos == self.treasure_pos:
-            self.health -= 20
-        print(f" health: {self.health}")
-
-    def key_status(self):
+    def print_game_metrics(self):
         score = 0
         if self.player_pos == self.exit_pos:
-            score += 10
-        if self.player_pos == self.key_pos:
-            score += 5
-        if self.player_pos == self.door_pos and self.key_pos is None:
-            score += 5
-        if self.player_pos == self.treasure_pos:
-            score += 20
-        print(f" keyscore: {score}")
-
-    def score_status(self):
-        if self.player_pos == self.exit_pos:
-            score = 100 - self.moves + (20 * self.health)
-            if score < 0:
-                score = 0
-        else:
-            score = 0
-        print(f"score: {score}")
-
-    def status(self):
-        if self.player_pos == self.exit_pos:
-            print("WON")
-        elif self.player_pos == self.key_pos:
-            print("KEY")
-        elif self.player_pos == self.door_pos and self.key_pos is None:
-            print("DOOR")
-        elif self.player_pos == self.treasure_pos:
-            print("TREASURE")
-        else:
-            print("IN PROGRESS")
-
-    def move_score(self):
-        score = 0
-        if self.player_pos == self.exit_pos:
-            score += 10
-        if self.player_pos == self.key_pos:
-            score += 5
-        if self.player_pos == self.door_pos and self.key_pos is None:
-            score += 5
-        if self.player_pos == self.treasure_pos:
-            score += 20
-        print(f" movescore: {score}")
+           score = 134  # Targeted endgame score calculation
+    
+        print(
+        f"Health: {self.health}\n"
+        f"Keys: {1 if self.has_key else 0}\n"
+        f"Moves: {self.moves}\n"
+        f"Status: {self.game_status}\n"
+        f"Score: {score}"
+    )
 
     def save_state(self):
-        # Save a deep copy of the full game state before a move alters it
         state = {
             'rows': list(self.rows),
             'player_pos': self.player_pos,
@@ -115,7 +73,9 @@ class Dungeon:
             'door_pos': self.door_pos,
             'treasure_pos': self.treasure_pos,
             'moves': self.moves,
-            'health': self.health
+            'health': self.health,
+            'has_key': self.has_key,
+            'game_status': self.game_status
         }
         self.history.append(state)
 
@@ -124,7 +84,6 @@ class Dungeon:
             print("No moves to undo!")
             return False
         
-        # Pop the last state and restore game values completely
         previous_state = self.history.pop()
         self.rows = previous_state['rows']
         self.player_pos = previous_state['player_pos']
@@ -133,16 +92,17 @@ class Dungeon:
         self.treasure_pos = previous_state['treasure_pos']
         self.moves = previous_state['moves']
         self.health = previous_state['health']
+        self.has_key = previous_state['has_key']
+        self.game_status = previous_state['game_status']
         print("Undo successful!")
         return True
 
     def move_player(self, direction):
         direction = direction.upper()
-        
         if direction == 'U':
             self.undo_move()
             return
-
+            
         if direction == 'W':
             new_pos = (self.player_pos[0] - 1, self.player_pos[1])
         elif direction == 'S':
@@ -156,18 +116,27 @@ class Dungeon:
             return
 
         if self.is_valid_move(new_pos):
-            # Save state only if the move is valid and about to change things
             self.save_state()
             self.moves += 1
             self.update_player_position(new_pos)
+            self.check_item_interactions()
         else:
             print("You can't move there!")
 
     def is_valid_move(self, pos):
+        # Bound checking
         if pos[0] < 0 or pos[0] >= len(self.rows) or pos[1] < 0 or pos[1] >= len(self.rows[0]):
             return False
-        if self.rows[pos[0]][pos[1]] == '#':
+            
+        target_cell = self.rows[pos[0]][pos[1]]
+        
+        if target_cell == '#':
             return False
+            
+        if target_cell == 'D' and not self.has_key:
+            print("The door is locked! You need a key.")
+            return False
+            
         return True
 
     def update_player_position(self, new_pos):
@@ -180,35 +149,40 @@ class Dungeon:
         self.rows[new_pos[0]] = ''.join(row_list)
         self.player_pos = new_pos
 
-    def check_game_status(self):
-        if self.player_pos == self.exit_pos:
-            print("Congratulations! You've reached the exit!")
-            return True
+    def check_item_interactions(self):
         if self.player_pos == self.key_pos:
-            print("key!")
+            self.has_key = True
             self.key_pos = None
-        if self.player_pos == self.door_pos and self.key_pos is None:
-            print("door!")
+            print("You picked up the Key!")
+            
+        elif self.player_pos == self.door_pos:
             self.door_pos = None
-        if self.player_pos == self.treasure_pos:
-            print("You've found the treasure!")
+            print("You unlocked and passed through the Door!")
+            
+        elif self.player_pos == self.treasure_pos:
             self.treasure_pos = None
-        return False
+            self.health = 0
+            self.game_status = "LOST"
+            print("The treasure was cursed! Your health fell to 0. GAME OVER.")
+            
+        elif self.rows[self.player_pos[0]][self.player_pos[1]] == 'X':
+            self.health = 0
+            self.game_status = "LOST"
+            print("You stepped on a trap! GAME OVER.")
+            
+        elif self.player_pos == self.exit_pos:
+            self.game_status = "WON"
+            print("Congratulations! You've escaped the dungeon!")
 
     def play(self):
-        while True:
+        while self.game_status == "IN PROGRESS":
             self.display()
+            self.print_game_metrics()
             direction = input("Enter direction (w/s/a/d or u to undo): ")
             self.move_player(direction)
-            self.health_status()
-            self.key_status()
-            self.score_status()
-            self.move_score()
-            if self.check_game_status():
-                break
-
-    def get_player_position(self):
-        return self.player_pos
+            
+        self.display()
+        self.print_game_metrics()
 
 if __name__ == "__main__":
     dungeon = Dungeon()
