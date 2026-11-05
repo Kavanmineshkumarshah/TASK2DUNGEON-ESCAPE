@@ -1,6 +1,6 @@
 import sys
 import os
-
+from list import p_list
 class Dungeon:
     VALID_CHARS = {'#', '.', 'P', 'E', 'K', 'D', 'T', 'G', 'X'}
 
