@@ -4,7 +4,7 @@ import sys
 
 
 class Dungeon:
-    VALID_CHARS = {'#', '.', 'P', 'E', 'K', 'D', 'T', 'G', 'X'}
+    VALID_CHARS = {'#', '.', 'P', 'E', 'K', 'D', 'T', 'G', 'X','+'}
 
     def __init__(self, map_file): 
         if not os.path.exists(map_file):
@@ -29,12 +29,12 @@ class Dungeon:
         self.treasure_pos = self.find_treasure()
         self.guard_pos = self.find_guard()
         self.trap_positions = self.find_traps()
-
+        self.potion_positions = self.find_potions()
         self.guard_dir = 1
         self.moves = 0
-        self.health = 2
+        self.health = 3
         self.has_key = False
-        self.game_status = 'IN PROGRESS'
+        self.game_status = 'Playing'
         self.history = []
 
     def validate_map(self):
@@ -59,6 +59,8 @@ class Dungeon:
                     player_count += 1
                 if char == 'E':
                     exit_count += 1
+                if char == 'X':
+                    self.health = -2
 
         if player_count != 1:
             print(
@@ -112,11 +114,16 @@ class Dungeon:
                 if char == 'X':
                     traps.append((i, j))
         return traps
-
+    def find_potions(self):
+        potions = []
+        for i, row in enumerate(self.rows):
+            for j, char in enumerate(row):
+                if char == '+':
+                    potions.append((i, j))
+        return potions
     def display(self):
         for row in self.rows:
             print(row)
-
     def print_game_metrics(self):
         score = 0
         if self.game_status == 'WON':
@@ -187,7 +194,7 @@ class Dungeon:
                 self.game_status = 'LOST'
                 print('You walked right into the Guard! GAME OVER.')
                 return
-            if self.game_status == 'IN PROGRESS':
+            if self.game_status == 'Playing':
                 self.move_guard()
                 self.check_item_interactions()
         else:
@@ -208,6 +215,7 @@ class Dungeon:
             print('The door is locked! You need a key.')
             return False
         return True
+    
 
     def update_player_position(self, new_pos):
         row_list = list(self.rows[self.player_pos[0]])
@@ -241,6 +249,8 @@ class Dungeon:
             under_guard = 'T'
         elif self.guard_pos in self.trap_positions:
             under_guard = 'X'
+        elif self.guard_pos in self.potion_positions:
+            under_guard = '+'
 
         row_list = list(self.rows[self.guard_pos[0]])
         if row_list[self.guard_pos[1]] == 'G':
@@ -248,6 +258,12 @@ class Dungeon:
             self.rows[self.guard_pos[0]] = ''.join(row_list)
 
         self.guard_pos = new_guard_pos
+        if self.guard_pos == self.player_pos:
+            self.health = "-2"
+            self.game_status = 'LOST'
+            print('The Guard moved into your space and caught you! GAME OVER.')
+            return
+
         if self.guard_pos == self.player_pos:
             self.health = 0
             self.game_status = 'LOST'
@@ -272,6 +288,9 @@ class Dungeon:
         elif self.player_pos == self.treasure_pos:
             self.treasure_pos = None
             self.health -= 1
+        elif self.player_pos ==self.find_potions:
+            self.find_potions=None
+            self.health += 1
             if self.health <= 0:
                 self.game_status = 'LOST'
                 print(
@@ -288,21 +307,31 @@ class Dungeon:
         elif self.player_pos == self.exit_pos:
             self.game_status = 'WON'
             print("Congratulations! You've escaped the dungeon!")
-
-
-
+        elif self.player_pos in self.find_potions():
+            self.health += 1
+            print(f'You found a potion! Your health increased to {self.health}.')
+            row_list = list(self.rows[self.player_pos[0]])
+            row_list[self.player_pos[1]] = '+'
+            self.rows[self.player_pos[0]] = ''.join(row_list)
+        elif self.player_pos in self.potion_positions:
+             self.potion_positions.remove(self.player_pos)
+             self.health += 1
+             row_list = list(self.rows[self.player_pos[0]])
+             row_list[self.player_pos[1]] = 'P'
+             self.rows[self.player_pos[0]] = ''.join(row_list)
+             print(f'You found a potion! Your health increased to {self.health}.')
 
     def play(self, move_sequence=None):
         if move_sequence:
             for step in move_sequence:
-                if self.game_status != 'IN PROGRESS':
+                if self.game_status != 'Playing':
                     break
                 self.move_player(step)
                 self.display()
                 self.print_game_metrics()
             return
 
-        while self.game_status == 'IN PROGRESS':
+        while self.game_status == 'Playing':
             self.display()
             self.print_game_metrics()
             direction = input('Enter direction (w/s/a/d or u to undo): ')
